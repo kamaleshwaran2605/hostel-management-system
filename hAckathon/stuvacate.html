@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hostel Vacation Application</title>
+  <style>
+    body { font-family: Arial; background: #f0f8ff; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    form { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px #999; width: 400px; }
+    input, textarea { width: 100%; padding: 10px; margin: 10px 0; }
+    button { background: #007bff; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <form id="vacateForm">
+    <h2>Hostel Vacation Form</h2>
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="text" id="regNo" placeholder="Register Number" required />
+    <textarea id="reason" placeholder="Reason for Vacating" required></textarea>
+    <input type="file" id="supportingFile" required />
+    <button type="submit">Submit Application</button>
+  </form>
+
+  <script type="module">
+    import { db, storage } from './common.js';
+    import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js";
+
+    const form = document.getElementById('vacateForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const regNo = document.getElementById('regNo').value;
+      const reason = document.getElementById('reason').value;
+      const file = document.getElementById('supportingFile').files[0];
+
+      const fileRef = ref(storage, 'vacateFiles/' + file.name);
+      await uploadBytes(fileRef, file);
+      const fileURL = await getDownloadURL(fileRef);
+
+      await addDoc(collection(db, 'vacateApplications'), {
+        name,
+        regNo,
+        reason,
+        fileURL,
+        approved: false,
+        timestamp: serverTimestamp()
+      });
+
+      alert('Application submitted!');
+      form.reset();
+    });
+  </script>
+</body>
+</html>

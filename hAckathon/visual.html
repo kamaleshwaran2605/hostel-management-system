@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mess Feedback</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial; text-align: center; margin-top: 50px; }
+    input, select { padding: 10px; margin: 10px; width: 200px; }
+    canvas { max-width: 600px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h2>Mess Feedback Form</h2>
+  <input type="text" id="name" placeholder="Enter your name"><br>
+  <select id="rating">
+    <option value="">Select Rating</option>
+    <option value="1">1 - Poor</option>
+    <option value="2">2 - Fair</option>
+    <option value="3">3 - Good</option>
+    <option value="4">4 - Very Good</option>
+    <option value="5">5 - Excellent</option>
+  </select><br>
+  <button onclick="submitFeedback()">Submit Feedback</button>
+
+  <hr>
+
+  <h2>Admin Panel - Feedback Chart</h2>
+  <canvas id="feedbackChart"></canvas>
+
+  <script>
+    // ✅ Step 1: Firebase Config (replace with your own)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // ✅ Step 2: Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ✅ Step 3: Submit Feedback to Firebase
+    function submitFeedback() {
+      const name = document.getElementById('name').value;
+      const rating = document.getElementById('rating').value;
+
+      if (name && rating) {
+        const feedbackRef = db.ref('feedbacks').push();
+        feedbackRef.set({ name, rating: Number(rating) });
+        alert("Feedback submitted!");
+        document.getElementById('name').value = '';
+        document.getElementById('rating').value = '';
+        loadChart(); // update chart
+      } else {
+        alert("Please enter name and rating");
+      }
+    }
+
+    // ✅ Step 4: Load Chart with Firebase Data
+    function loadChart() {
+      db.ref('feedbacks').once('value').then(snapshot => {
+        const feedbacks = snapshot.val();
+        const ratingCounts = [0, 0, 0, 0, 0]; // index 0 for rating 1, and so on
+
+        for (let key in feedbacks) {
+          const r = feedbacks[key].rating;
+          if (r >= 1 && r <= 5) {
+            ratingCounts[r - 1]++;
+          }
+        }
+
+        drawChart(ratingCounts);
+      });
+    }
+
+    // ✅ Step 5: Draw Chart using Chart.js
+    let chart;
+    function drawChart(data) {
+      const ctx = document.getElementById('feedbackChart').getContext('2d');
+      if (chart) chart.destroy(); // avoid multiple instances
+
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['1 - Poor', '2 - Fair', '3 - Good', '4 - Very Good', '5 - Excellent'],
+          datasets: [{
+            label: 'Number of Feedbacks',
+            data: data,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    // Load chart on page load
+    window.onload = loadChart;
+  </script>
+</body>
+</html>

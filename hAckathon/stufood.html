@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Today's Food Menu — Students</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg1:#f6f9fc;
+    --card:#ffffff;
+    --accent:#4f46e5;
+    --muted:#6b7280;
+  }
+  *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background: linear-gradient(180deg,#eef2ff 0%, #f8fafc 100%);
+    color:#0b1220;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+  }
+
+  .wrap{
+    max-width:920px;
+    width:100%;
+    display:grid;
+    grid-template-columns: 1fr 360px;
+    gap:20px;
+    align-items:start;
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 10px 30px rgba(2,6,23,0.06);
+    border:1px solid rgba(11,18,32,0.04);
+  }
+
+  .menuTitle { font-weight:700; font-size:20px; margin:0 0 8px 0; }
+  .menuDesc { color:var(--muted); margin:0 0 12px 0; white-space:pre-wrap; }
+
+  .menuImage {
+    width:100%;
+    border-radius:10px;
+    height:420px;
+    object-fit:cover;
+    background:linear-gradient(180deg,#eef2ff,#dfeefd);
+    display:block;
+  }
+
+  .meta { color:var(--muted); font-size:13px; margin-top:9px; }
+
+  .sideCard { max-width:360px; }
+
+  .placeholder {
+    height:420px;
+    display:flex;align-items:center;justify-content:center;color:var(--muted);
+    font-size:14px;border-radius:10px;background:linear-gradient(180deg,#fff,#f7fbff);border:1px dashed #dbeafe;
+  }
+
+  @media (max-width:980px){
+    .wrap{ grid-template-columns: 1fr; }
+    .menuImage{ height:240px; }
+    .placeholder{ height:240px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="menuTitle" id="menuTitle">Loading menu…</div>
+    <div class="menuDesc" id="menuDesc">Please wait while we fetch today's menu.</div>
+
+    <div id="imageContainer">
+      <div class="placeholder" id="loadingPlaceholder">No image yet</div>
+      <img id="menuImage" class="menuImage" src="" alt="Menu image" style="display:none;">
+    </div>
+
+    <div class="meta" id="updatedAt">Last updated: —</div>
+  </div>
+
+  <div class="card sideCard">
+    <h4 style="margin:0 0 10px 0;">Info</h4>
+    <p style="margin:0;color:var(--muted);font-size:14px;">
+      This page shows the latest food menu published by management. It updates automatically when they upload a new menu.
+    </p>
+
+    <hr style="margin:14px 0;border-color:#eef2ff">
+
+    <div style="display:flex;gap:10px;">
+      <a id="viewFullBtn" href="#" target="_blank" style="text-decoration:none;">
+        <button style="flex:1;padding:10px;border:0;border-radius:8px;background:linear-gradient(90deg,var(--accent),#06b6d4);color:white;font-weight:600;cursor:pointer;">
+          View / Download
+        </button>
+      </a>
+      <button id="refreshBtn" style="flex:0 0 48px;border:0;border-radius:8px;background:#eef2ff;color:#0b1220;cursor:pointer;">⟳</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+  // ---------- YOUR FIREBASE CONFIG ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyBqe9bYKH6ogOZwri-O9eHfHzG4hs6pBe8",
+    authDomain: "hackathaon-97878.firebaseapp.com",
+    projectId: "hackathaon-97878",
+    storageBucket: "hackathaon-97878.firebasestorage.app",
+    messagingSenderId: "406563265418",
+    appId: "1:406563265418:web:00a80a3f3a23e76dca4673",
+    measurementId: "G-717FQ25KJK",
+    databaseURL: "https://hackathaon-97878-default-rtdb.firebaseio.com"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const titleEl = document.getElementById("menuTitle");
+  const descEl = document.getElementById("menuDesc");
+  const imgEl = document.getElementById("menuImage");
+  const placeholder = document.getElementById("loadingPlaceholder");
+  const updatedAtEl = document.getElementById("updatedAt");
+  const viewBtn = document.getElementById("viewFullBtn");
+  const refreshBtn = document.getElementById("refreshBtn");
+
+  const menuRef = ref(db, "foodMenu/latest");
+
+  // realtime listener
+  onValue(menuRef, (snap) => {
+    if (!snap.exists()) {
+      titleEl.innerText = "No menu published yet";
+      descEl.innerText = "Please check back later.";
+      placeholder.style.display = "block";
+      imgEl.style.display = "none";
+      updatedAtEl.innerText = "Last updated: —";
+      viewBtn.href = "#";
+      return;
+    }
+
+    const d = snap.val();
+    titleEl.innerText = d.title || "Untitled menu";
+    descEl.innerText = d.description || "";
+    updatedAtEl.innerText = "Last updated: " + (d.updatedAt ? new Date(d.updatedAt).toLocaleString() : "—");
+
+    if (d.imageUrl) {
+      // show placeholder until image loads
+      placeholder.style.display = "block";
+      imgEl.style.display = "none";
+      imgEl.onload = () => {
+        placeholder.style.display = "none";
+        imgEl.style.opacity = 0;
+        imgEl.style.display = "block";
+        // simple fade in
+        imgEl.animate([{opacity:0},{opacity:1}],{duration:300,fill:'forwards'});
+      };
+      imgEl.onerror = () => {
+        placeholder.innerText = "Could not load image";
+        imgEl.style.display = "none";
+      };
+      imgEl.src = d.imageUrl;
+      viewBtn.href = d.imageUrl;
+    } else {
+      placeholder.style.display = "block";
+      placeholder.innerText = "No image available";
+      imgEl.style.display = "none";
+    }
+  });
+
+  refreshBtn.addEventListener("click", () => {
+    // small manual refresh action (retriggers listener state)
+    const current = menuRef;
+    // Do nothing special — onValue keeps it live. But we can briefly flash the button:
+    refreshBtn.animate([{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:600});
+  });
+</script>
+
+</body>
+</html>

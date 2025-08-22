@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Vacation Applications — Management (Fixed Email)</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+  body { background:#0b1220; color:#e6eef8; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; padding:28px; }
+  .panel { max-width:1100px; margin:0 auto; }
+  h2 { color:#06b6d4; margin-bottom:18px; }
+  .controls { display:flex; gap:12px; align-items:center; margin-bottom:14px; }
+  select, button.export { padding:8px 12px; border-radius:8px; border:0; background:#111827; color:#e6eef8; }
+  button.export { background:linear-gradient(90deg,#06b6d4,#4f46e5); font-weight:700; }
+  table { width:100%; border-collapse:collapse; border-radius:10px; overflow:hidden; background:#0f1724; }
+  th, td { padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.03); text-align:left; vertical-align:middle; font-size:14px; }
+  th { background:#081022; color:#06b6d4; font-weight:700; }
+  tr:hover { background: rgba(255,255,255,0.02); }
+  .btn-approve { background:#10b981; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }
+  .btn-approved { background:#374151; color:#cbd5e1; border-radius:8px; padding:8px 12px; border:0; }
+  .small-muted { color:#9aa4b2; font-size:13px; }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <h2>Vacation Applications — Management</h2>
+
+    <div class="controls">
+      <select id="filter">
+        <option value="all">All</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+      </select>
+      <button class="export" id="exportBtn">Export to CSV</button>
+    </div>
+
+    <div class="table-responsive">
+      <table id="appsTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Reg No</th>
+            <th>Room</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Reason</th>
+            <th>File</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+  <script>
+    // ✅ Replace these with your actual values from EmailJS dashboard
+    const EMAILJS_PUBLIC_KEY = "vlyjWuwaa6RH_Ger3"; 
+    const EMAILJS_SERVICE_ID = "service_siocsxj";  
+    const EMAILJS_TEMPLATE_ID = "template_v6865jy";  
+
+    // Initialize EmailJS
+    document.addEventListener("DOMContentLoaded", function() {
+      if (!EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") {
+        console.error("❌ EmailJS public key not set. Please replace EMAILJS_PUBLIC_KEY with your actual key.");
+      } else {
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+        console.log("✅ EmailJS initialized");
+      }
+    });
+  </script>
+
+<script>
+  const tableBody = document.getElementById("tableBody");
+  const filterEl = document.getElementById("filter");
+  const exportBtn = document.getElementById("exportBtn");
+
+  function loadApplications() {
+    return JSON.parse(localStorage.getItem("vacationApplications") || "[]");
+  }
+  function saveApplications(apps) {
+    localStorage.setItem("vacationApplications", JSON.stringify(apps));
+  }
+
+  function escapeHtml(s){ if(!s) return ""; return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+
+  function renderTable() {
+    const filter = filterEl.value;
+    const apps = loadApplications();
+    tableBody.innerHTML = "";
+
+    if (!apps.length) {
+      tableBody.innerHTML = `<tr><td colspan="9" class="small-muted" style="padding:20px;text-align:center;">No applications yet</td></tr>`;
+      return;
+    }
+
+    apps.forEach((app, idx) => {
+      if (filter === "approved" && !app.approved) return;
+      if (filter === "pending" && app.approved) return;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(app.name)}</td>
+        <td>${escapeHtml(app.regno)}</td>
+        <td>${escapeHtml(app.room||"")}</td>
+        <td>${escapeHtml(app.phone||"")}</td>
+        <td>${escapeHtml(app.email||"")}</td>
+        <td style="max-width:240px; white-space:pre-wrap;">${escapeHtml(app.reason)}</td>
+        <td><a class="view" href="${app.fileURL}" target="_blank">View File</a></td>
+        <td>${app.approved ? "Approved ✅" : "Pending ⏳"}</td>
+        <td>
+          ${app.approved ? `<button class="btn-approved" disabled>Signed</button>` : `<button class="btn-approve" onclick="approveApplication(${idx})">Approve & Email</button>`}
+        </td>
+      `;
+      tableBody.appendChild(tr);
+    });
+  }
+
+  async function approveApplication(index) {
+    let apps = loadApplications();
+    const app = apps[index];
+    if (!app) return;
+
+    const confirm = await Swal.fire({
+      title: 'Approve application?',
+      html: `Send approval email to <strong>${escapeHtml(app.email)}</strong> and mark as approved?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, approve & send email',
+    });
+    if (!confirm.isConfirmed) return;
+
+    const templateParams = {
+      to_name: app.name,
+      to_email: app.email,    
+      regno: app.regno,
+      room: app.room || "",
+      approved_date: new Date().toLocaleString(),
+      message: `Hello ${app.name},\n\nYour vacation application (Reg: ${app.regno}) has been approved.\n\nRegards,\nHostel Management`
+    };
+
+    Swal.fire({
+      title: 'Sending approval email…',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const result = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+      console.log("EmailJS send result:", result);
+
+      apps[index].approved = true;
+      apps[index].approvedAt = new Date().toISOString();
+      saveApplications(apps);
+      renderTable();
+
+      Swal.fire({ icon: 'success', title: 'Approved', text: `Email sent to ${app.email}` });
+    } catch (err) {
+      console.error("EmailJS error:", err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Email Failed',
+        html: `Email failed to send.<br><b>Reason:</b> ${escapeHtml(err?.text || err?.message || JSON.stringify(err))}`,
+        showCancelButton: true,
+        confirmButtonText: 'Retry sending',
+        cancelButtonText: 'Cancel (keep pending)'
+      }).then((choice) => {
+        if (choice.isConfirmed) {
+          approveApplication(index);
+        }
+      });
+    }
+  }
+
+  exportBtn.addEventListener("click", () => {
+    const apps = loadApplications();
+    if (!apps.length) { Swal.fire('No data','There are no applications to export.','info'); return; }
+    let csv = "Name,Register Number,Room,Phone,Email,Reason,File URL,Status,Approved At\n";
+    apps.forEach(a => {
+      csv += `"${(a.name||'').replace(/"/g,'""')}",` +
+             `"${(a.regno||'').replace(/"/g,'""')}",` +
+             `"${(a.room||'').replace(/"/g,'""')}",` +
+             `"${(a.phone||'').replace(/"/g,'""')}",` +
+             `"${(a.email||'').replace(/"/g,'""')}",` +
+             `"${(a.reason||'').replace(/"/g,'""')}",` +
+             `"${(a.fileURL||'').replace(/"/g,'""')}",` +
+             `"${a.approved ? 'Approved' : 'Pending'}",` +
+             `"${a.approvedAt || ''}"\n`;
+    });
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "vacation_applications.csv"; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  filterEl.addEventListener("change", renderTable);
+
+  renderTable();
+</script>
+</body>
+</html>

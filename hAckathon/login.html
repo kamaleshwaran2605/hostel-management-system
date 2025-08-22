@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login</title>
+  <style>
+    body {
+      background: linear-gradient(120deg, #ff5e62, #ff9966);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .container {
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 15px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.2);
+      width: 350px;
+      animation: fadeIn 1s ease;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      border: none;
+      border-bottom: 2px solid #ff5e62;
+      background: transparent;
+      outline: none;
+      font-size: 16px;
+    }
+
+    .password-wrapper {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      width: 24px;
+      height: 24px;
+      fill: #ff5e62;
+      transition: fill 0.3s;
+    }
+
+    .toggle-password:hover {
+      fill: #e14a4a;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      background-color: #ff5e62;
+      color: #fff;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s ease;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #e14a4a;
+    }
+
+    .link {
+      margin-top: 15px;
+      text-align: center;
+      color: #555;
+    }
+
+    .link a {
+      color: #ff5e62;
+      text-decoration: none;
+      font-weight: bold;
+      transition: color 0.3s;
+    }
+
+    .link a:hover {
+      color: #e14a4a;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
+</head>
+<body>
+  <div class="container">
+    <h2>hostel admin Login</h2>
+    <input type="email" id="email" placeholder="Email" autocomplete="off" />
+
+    <div class="password-wrapper">
+      <input type="password" id="password" placeholder="Password" autocomplete="off" />
+      <svg id="togglePassword" class="toggle-password" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M12 5c-7 0-10 6-10 7s3 7 10 7 10-6 10-7-3-7-10-7zm0 12c-3 0-5-2.5-5-5s2-5 5-5 5 2.5 5 5-2 5-5 5zm0-8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/>
+      </svg>
+    </div>
+
+    <button onclick="login()">Login</button>
+
+    <div class="link">
+      New user? <a href="signup.html">Click here to register</a>
+    </div>
+  </div>
+
+  <!-- Firebase and SweetAlert2 Scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    import Swal from "https://cdn.jsdelivr.net/npm/sweetalert2@11/+esm";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBqe9bYKH6ogOZwri-O9eHfHzG4hs6pBe8",
+      authDomain: "hackathaon-97878.firebaseapp.com",
+      projectId: "hackathaon-97878",
+      storageBucket: "hackathaon-97878.appspot.com",
+      messagingSenderId: "406563265418",
+      appId: "1:406563265418:web:00a80a3f3a23e76dca4673",
+      measurementId: "G-717FQ25KJK"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.login = async function() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!email || !password) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Missing Fields',
+          text: 'Please fill in both Email and Password.',
+          confirmButtonColor: '#ff5e62'
+        });
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Login Successful',
+          text: 'Welcome back!',
+          confirmButtonColor: '#4CAF50'
+        }).then(() => {
+          window.location.href = 'admin.html'; // change to your dashboard/home page
+        });
+
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Login Failed',
+          text: error.message,
+          confirmButtonColor: '#ff5e62'
+        });
+      }
+    };
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    // Password toggle
+    const togglePassword = document.querySelector('#togglePassword');
+    const passwordInput = document.querySelector('#password');
+
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+
+      if(type === 'text') {
+        togglePassword.style.fill = '#4CAF50';
+      } else {
+        togglePassword.style.fill = '#ff5e62';
+      }
+    });
+  </script>
+</body>
+</html>

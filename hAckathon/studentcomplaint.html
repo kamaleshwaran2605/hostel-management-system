@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hostel Complaint Management</title>
+<style>
+    /* Page Background */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        background: linear-gradient(135deg, #2c3e50, #34495e);
+        color: #fff;
+        padding: 20px;
+    }
+
+    /* Header */
+    h1 {
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+        letter-spacing: 1px;
+        font-weight: 700;
+        color: #f1c40f;
+        text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Complaints Grid */
+    .complaints {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+        padding: 10px;
+    }
+
+    /* Complaint Card */
+    .card {
+        background: #1e272e;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+    }
+
+    /* Complaint Image */
+    .card img {
+        width: 100%;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        max-height: 180px;
+        object-fit: cover;
+    }
+
+    /* Complaint Info */
+    .card h3 {
+        margin: 0;
+        color: #f39c12;
+        font-size: 1.3rem;
+    }
+    .card p {
+        margin: 5px 0;
+        color: #dcdde1;
+        font-size: 0.95rem;
+    }
+
+    /* Status Button Group */
+    .status-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    /* Status Buttons */
+    .status-btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background 0.3s ease, transform 0.2s ease;
+    }
+    .status-btn:hover {
+        transform: scale(1.05);
+    }
+    .pending {
+        background: #e74c3c;
+        color: white;
+    }
+    .done {
+        background: #27ae60;
+        color: white;
+    }
+</style>
+</head>
+<body>
+
+<h1>Hostel Complaint Management</h1>
+
+<div class="complaints" id="complaints-list">
+    <!-- Complaints will load here -->
+</div>
+
+<script>
+    // Example complaint data (Replace with Firebase fetch)
+    const complaints = [
+        {
+            room: "101",
+            reason: "Fan not working",
+            members: 3,
+            image: "https://via.placeholder.com/300x200",
+            status: "Pending"
+        },
+        {
+            room: "202",
+            reason: "Water leakage in bathroom",
+            members: 2,
+            image: "https://via.placeholder.com/300x200",
+            status: "Done"
+        }
+    ];
+
+    const list = document.getElementById("complaints-list");
+
+    complaints.forEach(c => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+            <img src="${c.image}" alt="Complaint Image">
+            <h3>Room ${c.room}</h3>
+            <p><strong>Reason:</strong> ${c.reason}</p>
+            <p><strong>Members in Room:</strong> ${c.members}</p>
+            <div class="status-buttons">
+                <button class="status-btn pending">Pending</button>
+                <button class="status-btn done">Done</button>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manage Applications</title>
+  <style>
+    body { font-family: Arial; background: #e9ecef; padding: 40px; }
+    .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
+    button { padding: 8px 12px; border: none; background: #28a745; color: white; border-radius: 5px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Submitted Hostel Vacation Applications</h2>
+  <div id="applicationList"></div>
+
+  <script type="module">
+    import { db } from './common.js';
+    import { collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+    const appList = document.getElementById('applicationList');
+    const querySnapshot = await getDocs(collection(db, 'vacateApplications'));
+
+    querySnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `
+        <b>Name:</b> ${data.name}<br>
+        <b>Register No:</b> ${data.regNo}<br>
+        <b>Reason:</b> ${data.reason}<br>
+        <b>Status:</b> ${data.approved ? '✅ Approved' : '❌ Not Approved'}<br>
+        <a href="${data.fileURL}" target="_blank">📄 View File</a><br>
+        <button ${data.approved ? 'disabled' : ''}>Approve</button>
+      `;
+
+      const btn = div.querySelector('button');
+      btn.addEventListener('click', async () => {
+        await updateDoc(doc(db, 'vacateApplications', docSnap.id), { approved: true });
+        alert('Approved successfully!');
+        btn.disabled = true;
+        location.reload();
+      });
+
+      appList.appendChild(div);
+    });
+  </script>
+</body>
+</html>

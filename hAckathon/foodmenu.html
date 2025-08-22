@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Manage Food Menu — Admin</title>
+
+<!-- SweetAlert2 for nice popups -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Simple Google font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg-a: #0f1724;
+    --card: #0b1220;
+    --accent: #4f46e5;
+    --accent-2:#06b6d4;
+    --muted: #9aa4b2;
+    --glass: rgba(255,255,255,0.04);
+  }
+  *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: linear-gradient(180deg,#071029 0%, #091029 60%);
+    color: #e6eef8;
+    padding:24px;
+  }
+
+  .panel{
+    width: 960px;
+    max-width:100%;
+    display:grid;
+    grid-template-columns: 420px 1fr;
+    gap:24px;
+    align-items:start;
+  }
+
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:14px;
+    padding:20px;
+    box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+
+  .left .title{
+    font-weight:700;
+    font-size:20px;
+    color: #fff;
+    margin-bottom:6px;
+  }
+  .left p { color:var(--muted); margin:0 0 16px 0; font-size:13px; }
+
+  label { display:block; font-size:13px; color:var(--muted); margin-bottom:8px; }
+  input[type="text"], textarea {
+    width:100%;
+    background:var(--glass);
+    border:1px solid rgba(255,255,255,0.04);
+    padding:10px 12px;
+    color:#eaf2ff;
+    border-radius:8px;
+    font-size:14px;
+    outline:none;
+  }
+  textarea { min-height:120px; resize:vertical; }
+
+  .file-wrap {
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .filePreview {
+    width:110px;
+    height:80px;
+    background:linear-gradient(180deg,#0f1724,#071229);
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    border: 1px dashed rgba(255,255,255,0.04);
+  }
+  .filePreview img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  .btn {
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    background: linear-gradient(90deg,var(--accent),var(--accent-2));
+    color:#fff;
+    padding:10px 14px;
+    border-radius:10px;
+    border:0;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow: 0 8px 20px rgba(79,70,229,0.12);
+  }
+  .btn[disabled]{ opacity:0.6; cursor:not-allowed; }
+
+  .progress {
+    width:100%;
+    height:10px;
+    background: rgba(255,255,255,0.03);
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:12px;
+  }
+  .progress > i {
+    display:block;
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--accent-2),var(--accent));
+    transition: width 200ms linear;
+  }
+  .meta { color:var(--muted); font-size:13px; margin-top:10px; }
+
+  /* right column (preview) */
+  .previewHeader { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .previewHeader h3{ margin:0; font-size:18px; color:#fff; }
+  .previewCard {
+    margin-top:14px;
+    border-radius:12px;
+    overflow:hidden;
+    background: linear-gradient(180deg,#071227, #061026);
+    border:1px solid rgba(255,255,255,0.03);
+  }
+  .previewCard img{ width:100%; height:360px; object-fit:cover; display:block; }
+  .previewBody { padding:14px; }
+  .previewBody h4 { margin:0 0 8px 0; color:#fff; }
+  .previewBody p { margin:0; color:var(--muted); font-size:14px; white-space:pre-wrap; }
+
+  .small { font-size:12px; color:var(--muted); margin-top:8px; }
+  @media (max-width:980px){
+    .panel { grid-template-columns: 1fr; }
+    .previewCard img{ height:180px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <!-- left: form -->
+  <div class="card left">
+    <div class="title">Publish Food Menu</div>
+    <p>Upload the food menu (image or PDF). The image is stored on Cloudinary and the URL is saved to Firebase so students instantly see it.</p>
+
+    <label for="titleInput">Menu Title</label>
+    <input id="titleInput" type="text" placeholder="e.g. Weekly Mess Menu (Week 32)">
+
+    <label for="descInput" style="margin-top:12px;">Notes / Description</label>
+    <textarea id="descInput" placeholder="Any notes — e.g. special items, day-wise highlights..."></textarea>
+
+    <label style="margin-top:12px;">Upload File (image/pdf)</label>
+    <div class="file-wrap">
+      <div class="filePreview" id="filePreview"><span style="color:var(--muted);font-size:12px;">Preview</span></div>
+
+      <div style="flex:1">
+        <input id="fileInput" type="file" accept="image/*,.pdf" />
+        <div class="progress" aria-hidden><i id="progressBar"></i></div>
+        <div class="meta" id="metaText">No file selected</div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:10px;">
+      <button class="btn" id="uploadBtn">📤 Upload & Publish</button>
+      <button class="btn" id="clearBtn" style="background:#263238;">Clear</button>
+    </div>
+
+    <div class="small">* Uses Cloudinary unsigned preset <strong>foodmenu</strong> and cloud <strong>dykpnskd7</strong>. </div>
+  </div>
+
+  <!-- right: preview -->
+  <div class="card right">
+    <div class="previewHeader">
+      <h3>Live Preview</h3>
+      <div class="small" id="updatedAt">Not published yet</div>
+    </div>
+
+    <div class="previewCard" id="previewCard">
+      <img id="previewImage" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450'%3E%3Crect width='100%25' height='100%25' fill='%230b1220'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='%239aa' font-family='Inter,Arial'>No menu uploaded</text%3E%3C/svg%3E" alt="preview">
+      <div class="previewBody">
+        <h4 id="previewTitle">Menu title will appear here</h4>
+        <p id="previewDesc">Description / notes will appear here once you fill and publish.</p>
+        <div class="small" id="previewTimestamp"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase + Core (module) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+  // ---------- YOUR FIREBASE CONFIG (from you) ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyBqe9bYKH6ogOZwri-O9eHfHzG4hs6pBe8",
+    authDomain: "hackathaon-97878.firebaseapp.com",
+    projectId: "hackathaon-97878",
+    storageBucket: "hackathaon-97878.firebasestorage.app",
+    messagingSenderId: "406563265418",
+    appId: "1:406563265418:web:00a80a3f3a23e76dca4673",
+    measurementId: "G-717FQ25KJK",
+    // add realtime DB url (ensure your RTDB is enabled)
+    databaseURL: "https://hackathaon-97878-default-rtdb.firebaseio.com"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ---------- CLOUDINARY ----------
+  const CLOUDINARY_CLOUD = "dykpnskd7";      // your cloud name
+  const CLOUDINARY_PRESET = "foodmenu";      // your unsigned preset
+
+  // DOM elements
+  const fileInput = document.getElementById("fileInput");
+  const filePreview = document.getElementById("filePreview");
+  const progressBar = document.getElementById("progressBar");
+  const metaText = document.getElementById("metaText");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const titleInput = document.getElementById("titleInput");
+  const descInput = document.getElementById("descInput");
+  const previewImage = document.getElementById("previewImage");
+  const previewTitle = document.getElementById("previewTitle");
+  const previewDesc = document.getElementById("previewDesc");
+  const previewTimestamp = document.getElementById("previewTimestamp");
+  const updatedAtText = document.getElementById("updatedAt");
+
+  let currentFile = null;
+
+  // show local preview when file selected
+  fileInput.addEventListener("change", (e) => {
+    const f = e.target.files[0];
+    currentFile = f || null;
+    if (!f) {
+      filePreview.innerHTML = "<span style='color:var(--muted);font-size:12px;'>Preview</span>";
+      metaText.textContent = "No file selected";
+      return;
+    }
+
+    // show thumbnail if image, or icon if PDF
+    if (f.type.startsWith("image/")) {
+      const url = URL.createObjectURL(f);
+      filePreview.innerHTML = `<img src="${url}" alt="preview">`;
+    } else {
+      filePreview.innerHTML = `<div style="color:var(--muted);font-size:12px;">${f.name}</div>`;
+    }
+    metaText.textContent = `${(f.size/1024|0)} KB • ${f.type || "file"}`;
+  });
+
+  // clear form
+  clearBtn.addEventListener("click", () => {
+    titleInput.value = "";
+    descInput.value = "";
+    fileInput.value = "";
+    currentFile = null;
+    filePreview.innerHTML = "<span style='color:var(--muted);font-size:12px;'>Preview</span>";
+    progressBar.style.width = "0%";
+    previewTitle.innerText = "Menu title will appear here";
+    previewDesc.innerText = "Description / notes will appear here once you fill and publish.";
+    previewImage.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450'%3E%3Crect width='100%25' height='100%25' fill='%230b1220'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='%239aa' font-family='Inter,Arial'>No menu uploaded</text%3E%3C/svg%3E";
+    updatedAtText.innerText = "Not published yet";
+  });
+
+  // upload flow using XHR for progress
+  uploadBtn.addEventListener("click", async () => {
+    const title = titleInput.value.trim();
+    const desc = descInput.value.trim();
+    const file = currentFile;
+
+    if (!title) {
+      Swal.fire({ icon:'warning', title:'Title required', text:'Please enter a menu title.' }); return;
+    }
+    if (!file) {
+      Swal.fire({ icon:'warning', title:'File required', text:'Please choose an image or pdf to upload.' }); return;
+    }
+
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = "Uploading…";
+    progressBar.style.width = "0%";
+
+    try {
+      // Build form data for Cloudinary
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("upload_preset", CLOUDINARY_PRESET);
+
+      // XHR so we can track progress
+      const xhr = new XMLHttpRequest();
+      const cloudUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/upload`;
+
+      xhr.open("POST", cloudUrl, true);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          progressBar.style.width = pct + "%";
+        }
+      };
+
+      xhr.onerror = () => {
+        throw new Error("Network error during upload.");
+      };
+
+      xhr.onload = async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          let res;
+          try { res = JSON.parse(xhr.responseText); } catch (err) { throw new Error("Invalid Cloudinary response"); }
+          if (!res.secure_url) {
+            throw new Error(res.error?.message || "Upload failed (no URL).");
+          }
+
+          // Save to Realtime Database
+          const menuData = {
+            title,
+            description: desc,
+            imageUrl: res.secure_url,
+            updatedAt: new Date().toISOString()
+          };
+          await set(ref(db, "foodMenu/latest"), menuData);
+
+          // update preview immediately
+          previewTitle.innerText = title;
+          previewDesc.innerText = desc || "";
+          previewImage.src = res.secure_url;
+          previewTimestamp.innerText = "Published just now";
+          updatedAtText.innerText = new Date().toLocaleString();
+
+          // success popup
+          Swal.fire({
+            icon: "success",
+            title: "Published!",
+            text: "Food menu uploaded and published to students.",
+            timer: 1800,
+            showConfirmButton: false
+          });
+
+        } else {
+          let errMsg = "Upload failed with status " + xhr.status;
+          try { const json = JSON.parse(xhr.responseText); errMsg = json.error?.message || errMsg; } catch(_) {}
+          Swal.fire({ icon:"error", title:"Upload failed", text: errMsg });
+        }
+
+        // restore UI
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = "📤 Upload & Publish";
+      };
+
+      xhr.send(fd);
+
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon:"error", title:"Error", text: err.message || "Unknown error" });
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = "📤 Upload & Publish";
+    }
+  });
+
+  // Real-time listener to populate preview if DB already has a menu
+  const liveRef = ref(db, "foodMenu/latest");
+  onValue(liveRef, (snap) => {
+    if (snap.exists()) {
+      const d = snap.val();
+      previewTitle.innerText = d.title || "Untitled menu";
+      previewDesc.innerText = d.description || "";
+      previewImage.src = d.imageUrl || previewImage.src;
+      previewTimestamp.innerText = d.updatedAt ? new Date(d.updatedAt).toLocaleString() : "";
+      updatedAtText.innerText = d.updatedAt ? new Date(d.updatedAt).toLocaleString() : "Not published yet";
+    }
+  });
+
+</script>
+</body>
+</html>

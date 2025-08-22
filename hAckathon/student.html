@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Hostel Vacation Form — Student</title>
+
+  <!-- SweetAlert2 for nice popups -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg1:#667eea; --bg2:#764ba2;
+      --card:#0f1724; --muted:#b9c0c8; --accent:#06b6d4;
+    }
+    *{box-sizing:border-box; font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;}
+    body{
+      margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background: linear-gradient(135deg,var(--bg1),var(--bg2));
+      padding:24px; color:#fff;
+    }
+    .card{
+      width:420px; background:var(--card); border-radius:12px; padding:22px;
+      box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    h2{ margin:0 0 12px 0; color:#fff; text-align:center;}
+    label{ display:block; margin-top:10px; color:var(--muted); font-size:13px;}
+    input[type="text"], input[type="email"], input[type="tel"], textarea, input[type="file"]{
+      width:100%; padding:10px 12px; margin-top:6px; border-radius:8px; border:0; background:#111217; color:#fff;
+      font-size:14px;
+    }
+    textarea{ min-height:90px; resize:vertical; }
+    .row{ display:flex; gap:10px; }
+    .row .col{ flex:1; }
+    .buttons{ margin-top:14px; display:flex; gap:10px; }
+    button.primary{
+      flex:1; padding:11px; border-radius:10px; border:0; background:linear-gradient(90deg,#06b6d4,#4f46e5);
+      color:white; font-weight:700; cursor:pointer;
+      box-shadow: 0 8px 20px rgba(79,70,229,0.12);
+    }
+    .small{ font-size:13px; color:var(--muted); text-align:center; margin-top:10px;}
+    .progress { height:8px; background:rgba(255,255,255,0.03); border-radius:999px; overflow:hidden; margin-top:8px; }
+    .progress > i { display:block; height:100%; width:0%; background:linear-gradient(90deg,#06b6d4,#4f46e5); transition:width 160ms linear;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Hostel Vacation Form</h2>
+
+    <label>Name</label>
+    <input id="name" type="text" placeholder="Your full name">
+
+    <label>Register Number</label>
+    <input id="regno" type="text" placeholder="e.g. 2110">
+
+    <label>Email</label>
+    <input id="email" type="email" placeholder="your@email.com">
+
+    <div class="row">
+      <div class="col">
+        <label>Phone</label>
+        <input id="phone" type="tel" placeholder="+91 98765 43210">
+      </div>
+      <div class="col">
+        <label>Room No</label>
+        <input id="room" type="text" placeholder="e.g. A-211">
+      </div>
+    </div>
+
+    <label style="margin-top:10px;">Reason for vacation</label>
+    <textarea id="reason" placeholder="Explain briefly..."></textarea>
+
+    <label style="margin-top:10px;">Attach file (ID / permission letter)</label>
+    <input id="file" type="file" accept=".pdf,.jpg,.png,.jpeg,.doc,.docx">
+
+    <div class="progress" aria-hidden><i id="uploadBar"></i></div>
+
+    <div class="buttons">
+      <button class="primary" id="submitBtn">Submit</button>
+    </div>
+
+    <div class="small">We use Cloudinary for file hosting — file will be uploaded securely. Keep your email handy for approval notice.</div>
+  </div>
+
+<script type="module">
+  // ===== CONFIG - replace if needed =====
+  const CLOUDINARY_CLOUD = "dykpnskd7";           // your cloud name
+  const CLOUDINARY_UPLOAD_PRESET = "vacation_docs"; // unsigned preset for vacation docs (replace if different)
+
+  // elements
+  const nameEl = document.getElementById("name");
+  const regEl = document.getElementById("regno");
+  const emailEl = document.getElementById("email");
+  const phoneEl = document.getElementById("phone");
+  const roomEl = document.getElementById("room");
+  const reasonEl = document.getElementById("reason");
+  const fileEl = document.getElementById("file");
+  const submitBtn = document.getElementById("submitBtn");
+  const uploadBar = document.getElementById("uploadBar");
+
+  // helper: show alert
+  function showAlert(type, title, text, timer=1800) {
+    Swal.fire({ icon:type, title:title, text:text, timer: timer, showConfirmButton: false });
+  }
+
+  // submit handler
+  submitBtn.addEventListener("click", async () => {
+    const name = nameEl.value.trim();
+    const regno = regEl.value.trim();
+    const email = emailEl.value.trim();
+    const phone = phoneEl.value.trim();
+    const room = roomEl.value.trim();
+    const reason = reasonEl.value.trim();
+    const file = fileEl.files[0];
+
+    if (!name || !regno || !email || !phone || !room || !reason || !file) {
+      showAlert("warning", "Missing fields", "Please fill all fields and attach a file.");
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Uploading...";
+
+    try {
+      // upload to Cloudinary using XHR for progress
+      const form = new FormData();
+      form.append("file", file);
+      form.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`, true);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          uploadBar.style.width = pct + "%";
+        }
+      };
+
+      xhr.onerror = () => { throw new Error("Network error during upload"); };
+
+      xhr.onload = () => {
+        try {
+          const res = JSON.parse(xhr.responseText);
+          if (!res.secure_url) throw new Error(res.error?.message || "Upload failed");
+
+          // build application object
+          const application = {
+            name, regno, email, phone, room, reason,
+            fileURL: res.secure_url,
+            approved: false,
+            submittedAt: new Date().toISOString()
+          };
+
+          // save to localStorage (client-side)
+          const apps = JSON.parse(localStorage.getItem("vacationApplications") || "[]");
+          apps.push(application);
+          localStorage.setItem("vacationApplications", JSON.stringify(apps));
+
+          // UI
+          uploadBar.style.width = "100%";
+          showAlert("success", "Submitted", "Your application was submitted successfully.");
+          // clear form
+          [nameEl, regEl, emailEl, phoneEl, roomEl, reasonEl].forEach(i => i.value = "");
+          fileEl.value = "";
+        } catch (err) {
+          console.error(err);
+          showAlert("error", "Upload error", err.message || "Unknown error");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit";
+          setTimeout(()=> uploadBar.style.width = "0%", 600);
+        }
+      };
+
+      xhr.send(form);
+
+    } catch (err) {
+      console.error(err);
+      showAlert("error", "Error", err.message || "Upload failed");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit";
+      uploadBar.style.width = "0%";
+    }
+  });
+</script>
+</body>
+</html>

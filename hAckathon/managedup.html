@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Complaint Management</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #121212;
+    color: #fff;
+    margin: 0;
+    padding: 20px;
+    transition: background 0.3s, color 0.3s;
+  }
+  body.light {
+    background-color: #f4f4f4;
+    color: #222;
+  }
+  h1 {
+    text-align: center;
+    color: #00bfff;
+  }
+  .top-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  select, button.theme-toggle {
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  select {
+    background-color: #1e1e1e;
+    color: white;
+  }
+  body.light select {
+    background-color: #fff;
+    color: #000;
+    border: 1px solid #ccc;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  body.light table {
+    background-color: #fff;
+  }
+  th, td {
+    padding: 15px;
+    text-align: left;
+  }
+  th {
+    background-color: #111;
+    color: #00bfff;
+  }
+  body.light th {
+    background-color: #e0e0e0;
+    color: #0066aa;
+  }
+  tr:nth-child(even) {
+    background-color: #2a2a2a;
+  }
+  body.light tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  .status-badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-weight: bold;
+    display: inline-block;
+  }
+  .done {
+    background-color: #28a745;
+    color: white;
+  }
+  .pending {
+    background-color: orange;
+    color: white;
+  }
+  .action-btn {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .mark-done {
+    background-color: #28a745;
+    color: white;
+  }
+  .mark-pending {
+    background-color: orange;
+    color: white;
+  }
+  img {
+    max-width: 80px;
+    border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Complaint Management</h1>
+
+<div class="top-controls">
+  <select id="statusFilter" onchange="loadComplaints()">
+    <option value="All">All</option>
+    <option value="Pending">Pending</option>
+    <option value="Done">Done</option>
+  </select>
+  <button class="theme" onclick="toggleTheme()">Theme</button>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Room</th>
+      <th>Reason</th>
+      <th>Members</th>
+      <th>Photo</th>
+      <th>Status</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody id="complaintsTable"></tbody>
+</table>
+
+<script>
+function loadComplaints() {
+  const complaints = JSON.parse(localStorage.getItem("complaints") || "[]");
+  const filter = document.getElementById("statusFilter").value;
+  const tbody = document.getElementById("complaintsTable");
+  tbody.innerHTML = "";
+
+  complaints
+    .filter(comp => filter === "All" || comp.status === filter)
+    .forEach((comp, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${comp.room}</td>
+        <td>${comp.reason}</td>
+        <td>${comp.members}</td>
+        <td><img src="${comp.photoURL}" alt="Complaint Photo" /></td>
+        <td><span class="status-badge ${comp.status === 'Done' ? 'done' : 'pending'}">${comp.status}</span></td>
+        <td>
+          <button class="action-btn ${comp.status === 'Done' ? 'mark-pending' : 'mark-done'}" 
+            onclick="toggleStatus(${index})">
+            ${comp.status === 'Done' ? 'Mark Pending' : 'Mark Done'}
+          </button>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+}
+
+function toggleStatus(index) {
+  let complaints = JSON.parse(localStorage.getItem("complaints") || "[]");
+  complaints[index].status = complaints[index].status === "Done" ? "Pending" : "Done";
+  localStorage.setItem("complaints", JSON.stringify(complaints));
+  loadComplaints();
+}
+
+function toggleTheme() {
+  document.body.classList.toggle("light");
+}
+
+loadComplaints();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hostel Complaint Form</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #667eea, #764ba2);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #2d2d2d;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      width: 400px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .msg {
+      margin-top: 10px;
+      text-align: center;
+      color: #90ee90;
+    }
+  </style>
+</head>
+<body>
+    <div class="card">
+      <h1>Hostel Complaint Form</h1>
+
+      <label for="room">Room Number</label>
+      <input id="room" type="text" placeholder="e.g. A-211" />
+
+      <label for="reason">Reason for Complaint</label>
+      <textarea id="reason" placeholder="Describe the issue..."></textarea>
+
+      <label for="members">Members in Room</label>
+      <input id="members" type="number" min="1" placeholder="e.g. 3" />
+
+      <label for="photo">Upload Photo</label>
+      <input id="photo" type="file" accept="image/*" />
+
+      <button id="submitBtn">Submit Complaint</button>
+
+      <div class="msg" id="msg"></div>
+    </div>
+
+<script>
+document.getElementById("submitBtn").addEventListener("click", submitForm);
+
+async function submitForm() {
+  const room = document.getElementById("room").value.trim();
+  const reason = document.getElementById("reason").value.trim();
+  const members = document.getElementById("members").value.trim();
+  const fileInput = document.getElementById("photo");
+  const file = fileInput.files[0];
+
+  if (!file || !room || !reason || !members) {
+    alert("All fields are required!");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "complaint"); // Your unsigned Cloudinary preset
+
+  const url = `https://api.cloudinary.com/v1_1/dykpnskd7/auto/upload`;
+
+  try {
+    const response = await fetch(url, { method: "POST", body: formData });
+    const data = await response.json();
+
+    if (data.secure_url) {
+      const complaintData = {
+        room,
+        reason,
+        members,
+        photoURL: data.secure_url,
+        status: "Pending"
+      };
+
+      let complaints = JSON.parse(localStorage.getItem("complaints") || "[]");
+      complaints.push(complaintData);
+      localStorage.setItem("complaints", JSON.stringify(complaints));
+
+      document.getElementById("msg").textContent = "Complaint submitted successfully!";
+      document.getElementById("room").value = "";
+      document.getElementById("reason").value = "";
+      document.getElementById("members").value = "";
+      document.getElementById("photo").value = "";
+    } else {
+      alert("Upload failed. Check Cloudinary preset.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Upload error!");
+  }
+}
+</script>
+</body>
+</html>

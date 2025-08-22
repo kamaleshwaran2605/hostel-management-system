@@ -1,0 +1,106 @@
+<!-- admin.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial; text-align: center; padding-top: 30px; }
+    input { margin: 10px; padding: 8px; width: 200px; }
+    canvas { margin-top: 40px; max-width: 600px; }
+    #logout { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div id="loginDiv">
+    <h2>Admin Login</h2>
+    <input type="email" id="adminEmail" placeholder="Admin Email"><br>
+    <input type="password" id="adminPassword" placeholder="Password"><br>
+    <button onclick="adminLogin()">Login</button>
+  </div>
+
+  <div id="dashboard" style="display:none;">
+    <h2>Welcome, Admin</h2>
+    <h3 id="avgRating">Average Rating: </h3>
+    <canvas id="chart"></canvas>
+    <br><button id="logout" onclick="logout()">Logout</button>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function adminLogin() {
+      const email = document.getElementById('adminEmail').value;
+      const password = document.getElementById('adminPassword').value;
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          document.getElementById('loginDiv').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          loadChart();
+        })
+        .catch(error => alert("Login Failed: " + error.message));
+    }
+
+    function logout() {
+      auth.signOut().then(() => {
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('loginDiv').style.display = 'block';
+      });
+    }
+
+    let chart;
+    function loadChart() {
+      db.ref('feedbacks').once('value').then(snapshot => {
+        const feedbacks = snapshot.val();
+        const counts = [0, 0, 0, 0, 0];
+        let total = 0;
+        let sum = 0;
+
+        for (let key in feedbacks) {
+          const r = feedbacks[key].rating;
+          if (r >= 1 && r <= 5) {
+            counts[r - 1]++;
+            sum += r;
+            total++;
+          }
+        }
+
+        const avg = total > 0 ? (sum / total).toFixed(2) : "No ratings";
+        document.getElementById('avgRating').innerText = "Average Rating: " + avg;
+
+        const ctx = document.getElementById('chart').getContext('2d');
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['1 - Poor', '2 - Fair', '3 - Good', '4 - Very Good', '5 - Excellent'],
+            datasets: [{
+              label: 'No. of Ratings',
+              data: counts,
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>

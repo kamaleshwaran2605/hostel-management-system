@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Complaints — Management</title>
+  <style>
+    :root{ --bg:#0f1720; --card:#0b1220; --accent:#00d4ff; --muted:#9aa; }
+    body{ margin:0; font-family:'Segoe UI', Roboto, Arial; background:linear-gradient(180deg,#071029,#091029 60%); color:#fff; padding:28px; }
+    header{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+    h1{ margin:0; color:var(--accent); }
+    .controls{ display:flex; gap:10px; align-items:center; }
+    select, button{ padding:10px 12px; border-radius:8px; border:0; font-weight:600; cursor:pointer; }
+    select{ background:#071226; color:#fff; }
+    button.primary{ background:linear-gradient(90deg,#16a085,#21bf73); color:#fff; }
+    .list{ background:var(--card); border-radius:12px; padding:18px; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+    table{ width:100%; border-collapse:collapse; margin-top:8px; color:#fff; }
+    th, td{ padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.04); text-align:left; vertical-align:middle; }
+    th{ color:var(--accent); font-weight:700; background:transparent; }
+    a.view{ color:var(--accent); text-decoration:none; }
+    button.approve{ background:#28a745; color:#fff; padding:8px 10px; border-radius:8px; border:0; cursor:pointer; }
+    button.done{ background:#6b7280; color:#fff; padding:8px 10px; border-radius:8px; border:0; cursor:default; }
+    .status-pending{ color:#ffb020; font-weight:700; }
+    .status-done{ color:#7ee787; font-weight:700; }
+    /* image modal */
+    .modal{ display:none; position:fixed; inset:0; justify-content:center; align-items:center; background:rgba(0,0,0,0.75); z-index:90; }
+    .modal img{ max-width:90%; max-height:90%; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,.6); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Complaints Management</h1>
+    <div class="controls">
+      <select id="filter">
+        <option value="all">All</option>
+        <option value="pending">Pending</option>
+        <option value="done">Done</option>
+      </select>
+      <button class="primary" id="exportBtn">Export CSV</button>
+    </div>
+  </header>
+
+  <div class="list">
+    <table>
+      <thead>
+        <tr>
+          <th>Room</th><th>Reason</th><th>Members</th><th>Photo</th><th>Status</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- image modal -->
+  <div id="modal" class="modal">
+    <img id="modalImg" src="" alt="preview" />
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import {
+      getFirestore, collection, query, orderBy,
+      onSnapshot, doc, updateDoc, getDocs
+    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBqe9bYKH6ogOZwri-O9eHfHzG4hs6pBe8",
+      authDomain: "hackathaon-97878.firebaseapp.com",
+      projectId: "hackathaon-97878",
+      storageBucket: "hackathaon-97878.appspot.com",
+      messagingSenderId: "406563265418",
+      appId: "1:406563265418:web:00a80a3f3a23e76dca4673",
+      measurementId: "G-717FQ25KJK"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const tbody = document.getElementById("tbody");
+    const filterEl = document.getElementById("filter");
+    const exportBtn = document.getElementById("exportBtn");
+    const modal = document.getElementById("modal");
+    const modalImg = document.getElementById("modalImg");
+
+    let lastItems = [];
+
+    const q = query(collection(db, "complaints"), orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+      lastItems = [];
+      snapshot.forEach(docSnap => lastItems.push({ id: docSnap.id, ...docSnap.data() }));
+      renderTable(lastItems);
+    }, (err) => {
+      console.error("Firestore listen error:", err);
+      tbody.innerHTML = "<tr><td colspan='6'>Unable to load complaints (check Firestore rules & console)</td></tr>"
+    });
+
+    function renderTable(items) {
+      const filter = filterEl.value;
+      tbody.innerHTML = "";
+      const filtered = items.filter(it => {
+        if (filter === "all") return true;
+        if (filter === "pending") return it.status === "Pending";
+        if (filter === "done") return it.status === "Done";
+      });
+
+      if (!filtered.length) {
+        tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:#bbb;padding:18px'>No complaints found</td></tr>";
+        return;
+      }
+
+      filtered.forEach(it => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(it.room || "")}</td>
+          <td style="max-width:320px">${escapeHtml(it.reason || "")}</td>
+          <td>${it.members ?? ""}</td>
+          <td><a class="view" href="#" onclick="return openModal('${it.photoURL}')">View</a></td>
+          <td>${it.status === "Done" ? '<span class="status-done">Done</span>' : '<span class="status-pending">Pending</span>'}</td>
+          <td>${it.status === "Done" ? '<button class="done" disabled>Done</button>' : `<button class="approve" onclick="markDone('${it.id}')">Mark Done</button>`}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function escapeHtml(text){
+      if (!text) return "";
+      return text
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+    }
+
+    window.openModal = (url) => {
+      modalImg.src = url;
+      modal.style.display = "flex";
+      return false;
+    };
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.style.display = "none";
+        modalImg.src = "";
+      }
+    });
+
+    window.markDone = async (id) => {
+      try {
+        const dRef = doc(db, "complaints", id);
+        await updateDoc(dRef, { status: "Done", doneAt: new Date() });
+      } catch (err) {
+        console.error("update failed", err);
+        alert("Failed to mark done. Check console.");
+      }
+    };
+
+    exportBtn.addEventListener("click", async () => {
+      try {
+        const snap = await getDocs(collection(db, "complaints"));
+        const rows = [];
+        snap.forEach(d => {
+          const data = d.data();
+          rows.push([
+            (data.room || ""),
+            (data.reason || "").replace(/\n/g, " "),
+            data.members || "",
+            data.photoURL || "",
+            data.status || "",
+            data.doneAt ? (data.doneAt.toDate ? data.doneAt.toDate().toLocaleString() : data.doneAt) : ""
+          ]);
+        });
+        const csv = ["Room,Reason,Members,PhotoURL,Status,DoneAt"].concat(
+          rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(","))
+        ).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "complaints_export.csv";
+        a.click(); URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(err);
+        alert("Export failed");
+      }
+    });
+
+    filterEl.addEventListener("change", () => renderTable(lastItems));
+  </script>
+</body>
+</html>
